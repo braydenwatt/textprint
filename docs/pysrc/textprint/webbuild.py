@@ -14,7 +14,7 @@ from .ig_stats import ig_dossier, ig_overview, ig_wrapped
 from .interpret import (group_prompt, highlight_prompt, ig_prompt, members_prompt,
                         persona_prompt, synth_prompt)
 from .parsers.instagram import parse_instagram_json
-from .render import build_data, render_html
+from .render import build_data
 from .sampler import member_message_samples, sample_exchanges
 from .stats import global_dossier
 
@@ -135,7 +135,6 @@ def build_ig(threads, name="You", title="Textprint", min_date=None,
     persona = {"title": "Reading your DMs…", "blurb": ""}
     data = build_data(name, overview, persona, people_data, groups_data, "", wrapped, "instagram")
     app = {"id": "instagram", "name": "Instagram", "accent": ACCENT, "data": data}
-    html = render_html(title, name, [app], "Instagram · on-device + home Ollama")
-    return {"html": html, "jobs": jobs,
+    return {"apps": [app], "name": name or "You", "jobs": jobs,
             "stats": {"people": len(people), "groups": len(groups),
                       "people_total": len(people_all), "reads": len(jobs)}}

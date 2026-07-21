@@ -76,13 +76,19 @@ def build_data(name, overview, personality, people, groups, synopsis, wrapped, p
     }
 
 
-def render_html(title, name, apps, meta):
-    """apps: list of {id, name, accent, data}. Returns the full self-contained HTML."""
-    payload = {"title": title, "name": name,
+def render_html(title, name, apps, meta, live=False):
+    """apps: list of {id, name, accent, data}. Returns the full self-contained HTML.
+    live=True builds the browser-app shell: apps may be empty and get populated in
+    place after the visitor imports from the Settings app (see docs/import.js)."""
+    payload = {"title": title, "name": name, "live": live,
                "apps": [{"id": a["id"], "name": a["name"], "accent": a["accent"], "data": a["data"]}
                         for a in apps]}
+    libs = ('<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>'
+            '<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>'
+            '<script src="import.js"></script>') if live else ''
     return (HTML.replace("__DATA__", json.dumps(payload, ensure_ascii=False))
-                .replace("__META__", html.escape(meta)))
+                .replace("__META__", html.escape(meta))
+                .replace("__LIBS__", libs))
 
 
 def render_report(out_path, title, name, apps, meta):
@@ -230,6 +236,18 @@ h1,h2,h3,.f{font-family:Fredoka,system-ui,sans-serif;font-weight:600;letter-spac
 .appicon .ic{width:62px;height:62px;border-radius:14px;box-shadow:0 8px 18px rgba(0,0,0,.28);transition:transform .12s}
 .appicon .ic svg{width:100%;height:100%;display:block}
 .appicon:active .ic{transform:scale(.9)}
+.appicon.locked .ic{filter:grayscale(.7);opacity:.55}
+.appicon.locked .nm{opacity:.6}
+.impbtn{background:#0f172a;color:#fff;border:0;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.impbtn.sec{background:#eef1f7;color:#0f172a}
+.idrop{border:2px dashed #cbd5e1;border-radius:14px;padding:26px 16px;text-align:center;cursor:pointer;background:#fff;transition:.15s}
+.idrop.over{border-color:#E1306C;background:#fff5f9}
+.idrop .big{font-size:32px}.idrop .t{font-weight:700;font-size:15px;margin:8px 0 3px}.idrop .s{color:var(--mut);font-size:12.5px}
+.ifield{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;font-family:inherit;margin-top:4px}
+.ilabel{font-size:12px;font-weight:700;color:var(--mut)}
+.ipill{display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px}
+.ipill.ok{background:#dcfce7;color:#166534}.ipill.bad{background:#fee2e2;color:#991b1b}.ipill.wait{background:#fef9c3;color:#854d0e}
+.iprog{height:7px;background:#eef1f7;border-radius:5px;overflow:hidden;margin:8px 0 5px}.iprog>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#FA7E1E,#D62976);transition:width .3s}
 .appicon .nm{font-size:11.5px;color:#fff;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.45)}
 .igbig{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .igstat{border-radius:18px;padding:14px;color:#fff;min-height:88px;display:flex;flex-direction:column;justify-content:flex-end;position:relative;overflow:hidden}
@@ -242,7 +260,7 @@ h1,h2,h3,.f{font-family:Fredoka,system-ui,sans-serif;font-weight:600;letter-spac
 </style></head><body>
 <div class=phone><div class=notch></div><div class=screen id=screen></div><nav class=nav id=nav></nav><div class=hb onclick=showHome()></div></div>
 <script>
-const APP=__DATA__;const APPS=APP.apps;
+let APP=__DATA__;let APPS=APP.apps;
 let D=null,CUR=null,CURDET=null,CURMEM=null;
 const SVG={
  overview:'<svg viewBox="0 0 24 24" fill=none stroke=currentColor stroke-width=2 stroke-linecap=round stroke-linejoin=round><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></svg>',
@@ -470,17 +488,30 @@ function fullIcon(id){return {
  messages:'<svg viewBox="0 0 66.145836 66.145836" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id=imsg gradientUnits="userSpaceOnUse" x1="-25.272568" y1="207.52057" x2="-25.272568" y2="152.9982" gradientTransform="matrix(0.98209275,0,0,0.98209275,-1.0651782,3.7961838)"><stop offset="0" stop-color="#0cbd2a"/><stop offset="1" stop-color="#5bf675"/></linearGradient></defs><g transform="translate(59.483067,-145.8456)"><rect ry="14.567832" rx="14.567832" y="145.8456" x="-59.483067" height="66.145836" width="66.145836" fill="url(#imsg)"/><path fill="#ffffff" d="m -26.410149,157.29606 a 24.278298,20.222157 0 0 0 -24.278105,20.22202 24.278298,20.222157 0 0 0 11.79463,17.31574 27.365264,20.222157 0 0 1 -4.245218,5.94228 23.85735,20.222157 0 0 0 9.86038,-3.87367 24.278298,20.222157 0 0 0 6.868313,0.83768 24.278298,20.222157 0 0 0 24.2781059,-20.22203 24.278298,20.222157 0 0 0 -24.2781059,-20.22202 z"/></g></svg>',
  instagram:'<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id=iicon x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#FEDA75"/><stop offset="0.25" stop-color="#FA7E1E"/><stop offset="0.5" stop-color="#D62976"/><stop offset="0.75" stop-color="#962FBF"/><stop offset="1" stop-color="#4F5BD5"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#iicon)"/><g fill="none" stroke="#ffffff" stroke-width="3.6"><rect x="15.5" y="15.5" width="33" height="33" rx="10"/><circle cx="32" cy="32" r="8.3"/></g><circle cx="42" cy="22" r="2.3" fill="#ffffff"/></svg>',
  settings:'<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id=sicon x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EBEBF0"/><stop offset="1" stop-color="#8A8A90"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#sicon)"/><path fill="#5b5b62" d="M32 22.5a9.5 9.5 0 1 0 0 19 9.5 9.5 0 0 0 0-19zm0 6a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z"/><path fill="#5b5b62" d="M30 12h4l1 5.2 3.4 1.4 4.4-2.9 2.8 2.8-2.9 4.4 1.4 3.4 5.2 1v4l-5.2 1-1.4 3.4 2.9 4.4-2.8 2.8-4.4-2.9-3.4 1.4-1 5.2h-4l-1-5.2-3.4-1.4-4.4 2.9-2.8-2.8 2.9-4.4-1.4-3.4-5.2-1v-4l5.2-1 1.4-3.4-2.9-4.4 2.8-2.8 4.4 2.9 3.4-1.4z"/></svg>'}[id]||''}
-function showHome(){D=null;CUR=null;document.querySelector('.phone').classList.add('home');nav.style.display='none';scr.className='screen fade';
- scr.innerHTML=`<div class=springboard><div class=sb-top><div class=sb-time>9:41</div><div class=sb-date>${esc(APP.name)} · tap an app</div></div>
-  <div class=grid-apps>${APPS.map(a=>`<div class=appicon onclick="openApp('${a.id}')"><div class=ic>${fullIcon(a.id)}</div><div class=nm>${esc(a.name)}</div></div>`).join('')}<div class=appicon onclick="openApp('settings')"><div class=ic>${fullIcon('settings')}</div><div class=nm>Settings</div></div></div></div>`;
+const APPNAMES={messages:'Messages',instagram:'Instagram'};
+function appTiles(){
+ const ids=APP.live?Array.from(new Set(['instagram'].concat(APPS.map(a=>a.id)))):APPS.map(a=>a.id);
+ return ids.map(id=>{const a=APPS.find(x=>x.id==id),locked=APP.live&&!a;
+  return `<div class="appicon${locked?' locked':''}" onclick="openApp('${id}')"><div class=ic>${fullIcon(id)}</div><div class=nm>${esc(a?a.name:APPNAMES[id]||id)}</div></div>`}).join('');
+}
+function showHome(){D=null;CUR=null;CURDET=null;CURMEM=null;document.querySelector('.phone').classList.add('home');nav.style.display='none';scr.className='screen fade';
+ const hint=APP.live&&!hasData()?'tap Settings to import your data':'tap an app';
+ scr.innerHTML=`<div class=springboard><div class=sb-top><div class=sb-time>9:41</div><div class=sb-date>${esc(APP.name)} · ${hint}</div></div>
+  <div class=grid-apps>${appTiles()}<div class=appicon onclick="openApp('settings')"><div class=ic>${fullIcon('settings')}</div><div class=nm>Settings</div></div></div></div>`;
+ scr.scrollTo(0,0);
+}
+function emptyApp(id){document.querySelector('.phone').classList.remove('home');nav.style.display='none';CUR={id:id};scr.className='screen fade';
+ scr.innerHTML=`<span class=back onclick=showHome()>‹ Home</span><div class=card style="text-align:center;padding:30px 20px;margin-top:40px"><div style=width:56px;height:56px;margin:0 auto>${fullIcon(id)}</div><div class=f style="margin-top:12px;font-size:18px">No ${esc(APPNAMES[id]||id)} data yet</div><div class=legend style="justify-content:center;margin-top:6px">Import your export in the Settings app, then it'll show up here.</div><div style=margin-top:16px><button class=impbtn onclick="openApp('settings')">Open Settings</button></div></div>`;
  scr.scrollTo(0,0);
 }
 function openApp(id){document.querySelector('.phone').classList.remove('home');
  if(id=='settings'){D=null;CUR={id:'settings'};nav.style.display='none';settingsScreen();return}
- const app=APPS.find(a=>a.id==id);if(!app){showHome();return}
+ const app=APPS.find(a=>a.id==id);if(!app){if(APP.live){emptyApp(id);return}showHome();return}
  D=app.data;CUR=app;active='ov';go('ov');
 }
 function settingsScreen(){scr.className='screen fade';
+ if(APP.live){scr.innerHTML=`<span class=back onclick=showHome()>‹ Home</span><h1 style="margin:6px 0 10px">Settings</h1><div id=importmount></div>`;
+  scr.scrollTo(0,0);if(window.tpMountImport)window.tpMountImport();return}
  scr.innerHTML=`<span class=back onclick=showHome()>‹ Home</span><h1 style="margin:6px 0 2px">Settings</h1>
   <div class=card><div class=rowh><h3 class=f>Your data is private</h3></div><div class=legend style=margin:0>Every number here was computed on your device. No message, reel, or reaction ever left your machine.</div></div>
   <div class=card><div class=rowh><h3 class=f>Import</h3></div><div class=legend style="margin:0;line-height:1.7"><b>Messages</b> — export with imessage-exporter (HTML).<br><b>Instagram</b> — Settings → Your activity → Download your information → JSON, then re-run with <b>--ig-export</b>.</div></div>
@@ -513,8 +544,9 @@ window.addEventListener('message',function(ev){const d=ev.data||{};
  else if(d.type=='tp-highlights')TP_HL(d.slot,d.items);
  else if(d.type=='tp-members')TP_MEM(d.slot,d.reads);
  else if(d.type=='tp-ping'&&ev.source)ev.source.postMessage({type:'tp-ready'},'*')});
-window.TP_UPDATE=TP_UPDATE;
+window.TP_UPDATE=TP_UPDATE;window.TP_HL=TP_HL;window.TP_MEM=TP_MEM;
 window.go=go;window.detail=detail;window.filterC=filterC;window.showHome=showHome;window.openApp=openApp;
+window.APP=APP;window.APPS=APPS;window.hasData=function(){return APPS&&APPS.length>0};
 showHome();
 try{if(window.parent&&window.parent!==window)window.parent.postMessage({type:'tp-ready'},'*')}catch(e){}
-</script></body></html>"""
+</script>__LIBS__</body></html>"""

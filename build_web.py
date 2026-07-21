@@ -41,4 +41,12 @@ for m in PARSERS:
 manifest = ["textprint/" + m for m in MODULES] + ["textprint/parsers/__init__.py",
             "textprint/parsers/instagram.py"]
 (OUT.parent / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
-print(f"assembled {len(manifest)} modules into {OUT}")
+
+# generate the live phone-shell page (empty apps; Settings hosts the importer)
+import sys
+sys.path.insert(0, str(ROOT))
+from textprint.render import render_html  # noqa: E402
+page = render_html("Textprint", "You", [], "Instagram · on-device + home Ollama", live=True)
+(ROOT / "docs" / "index.html").write_text(page, encoding="utf-8")
+
+print(f"assembled {len(manifest)} modules into {OUT}; wrote docs/index.html (live shell)")
