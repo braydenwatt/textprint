@@ -21,3 +21,6 @@ mockup.html
 inbox/
 your_instagram_activity/
 *message_*.json
+
+# tunnel runtime
+server/.tunnel_hostname

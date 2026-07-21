@@ -26,15 +26,33 @@ export TEXTPRINT_TOKEN=some-shared-secret              # optional; blank disable
 uvicorn proxy:app --host 127.0.0.1 --port 8100
 ```
 
-## Expose it (Cloudflare tunnel)
+## Expose it — stable URL via a named tunnel (recommended)
+
+A **named tunnel** gives you a permanent hostname (e.g. `https://textprint.yourdomain.com`)
+instead of a random URL that changes every restart. Two PowerShell scripts automate it.
+
+Prereqs (one-time, yours): a domain on Cloudflare (free plan is fine) and
+`winget install Cloudflare.cloudflared`.
+
+```powershell
+cd server
+# one-time: logs in (browser), creates the tunnel, writes config, routes DNS
+.\setup_tunnel.ps1 -Hostname textprint.yourdomain.com
+
+# every day after: starts the proxy + tunnel together (Ctrl+C stops both)
+.\start.ps1
+# .\start.ps1 -Model qwen2.5:14b -Token my-secret
+```
+
+`start.ps1` prints your public URL — paste it into the site's "Ollama proxy URL" box.
+
+### Quick tunnel (no domain, throwaway URL)
 
 ```bash
 cloudflared tunnel --url http://127.0.0.1:8100
 ```
 
-Copy the `https://<random>.trycloudflare.com` URL it prints and set it as the
-site's proxy endpoint. For a stable hostname, use a named tunnel instead of the
-quick one.
+Gives a `https://<random>.trycloudflare.com` URL that changes each run.
 
 ## Config (env vars)
 
