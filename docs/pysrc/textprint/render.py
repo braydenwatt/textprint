@@ -227,6 +227,15 @@ h1,h2,h3,.f{font-family:Fredoka,system-ui,sans-serif;font-weight:600;letter-spac
 .phone.home{background:linear-gradient(165deg,#5b6cff,#9b59f6 48%,#ff6ec7)}
 .hb{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:120px;height:5px;border-radius:3px;background:#0b102055;z-index:55;cursor:pointer}
 .phone.home .hb{background:#ffffffaa}
+/* on a real phone, drop the phone-in-a-phone chrome and go full-screen */
+@media(max-width:680px){
+ body{display:block;padding:0;background:var(--bg)}
+ .phone{width:100%;max-width:none;height:100dvh;max-height:none;border-radius:0;box-shadow:none;transform:none;margin:0}
+ .notch{display:none}
+ .screen{padding-top:max(16px,env(safe-area-inset-top));padding-bottom:calc(94px + env(safe-area-inset-bottom))}
+ .nav{height:calc(76px + env(safe-area-inset-bottom));padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+ .hb{bottom:calc(7px + env(safe-area-inset-bottom))}
+}
 .springboard{min-height:100%;display:flex;flex-direction:column;padding-top:8px}
 .sb-top{text-align:center;color:#fff;margin:4px 0 26px;text-shadow:0 2px 10px rgba(0,0,0,.28)}
 .sb-time{font-family:Fredoka;font-size:62px;font-weight:600;line-height:1}
@@ -439,7 +448,7 @@ function detail(tab,i){const p=(tab=='gr'?D.groups:D.people)[i];scr.className='s
  <div class=statrow><div class=stat title="total messages exchanged"><div class=n>${kk(p.msgs)}</div><div class=l>messages</div></div>
   <div class=stat title="how long you typically take to first reply after a lull"><div class=n>${p.reply}</div><div class=l>your response</div></div>
   <div class=stat title="avg sentiment of your messages (-1 to +1)"><div class=n>${p.mood>0?'+':''}${p.mood}</div><div class=l>your mood</div></div></div>
- <div class=card><div class=rowh><h3 class=f>The read</h3><span class=pill>AI · on-device</span></div><div class=narr id=narr-${tab=='gr'?'group':'person'}-${i}>${p.narr?narrBlocks(p.narr):narrPh(4)}</div></div>
+ ${(p.narr||window.TP_NARRATING||APP.live)?`<div class=card><div class=rowh><h3 class=f>The read</h3><span class=pill>AI · on-device</span></div><div class=narr id=narr-${tab=='gr'?'group':'person'}-${i}>${p.narr?narrBlocks(p.narr):narrPh(4)}</div></div>`:''}
  <div class=card id=hlcard style="${(p.highlights&&p.highlights.length)?'':'display:none'}">${hlInner(p)}</div>
  ${mid}
  ${p.ig?igContactCard(p):''}
