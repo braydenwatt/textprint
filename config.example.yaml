@@ -1,0 +1,8 @@
+# textprint — optional config (all fields also available as CLI flags)
+provider: ollama            # local, no data leaves your machine
+model: qwen2.5:14b          # any Ollama model; bigger = better narratives, slower
+min_messages: 40            # skip contacts you've barely texted
+min_date: null              # e.g. "2023-01-01" to focus on recent history
+samples: 5                  # sampled conversations shown to the model per contact
+temperature: 0.4
+# exclude: exclude.txt      # optional list of conversation filenames to skip

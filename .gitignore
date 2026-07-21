@@ -1,0 +1,23 @@
+# python
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+
+# ── personal data & generated reports (NEVER commit) ──
+report.html
+*.report.html
+web_test_report.html
+web_test_jobs.json
+_payload_cache.json
+_inject_reactions.py
+mockup.html
+*.zip
+*.local.*
+
+# personal message exports of any kind
+inbox/
+your_instagram_activity/
+*message_*.json

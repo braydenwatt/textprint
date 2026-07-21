@@ -1,0 +1,13 @@
+[
+ "textprint/__init__.py",
+ "textprint/schema.py",
+ "textprint/stats.py",
+ "textprint/ig_stats.py",
+ "textprint/wrapped.py",
+ "textprint/sampler.py",
+ "textprint/interpret.py",
+ "textprint/render.py",
+ "textprint/webbuild.py",
+ "textprint/parsers/__init__.py",
+ "textprint/parsers/instagram.py"
+]

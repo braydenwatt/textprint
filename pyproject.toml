@@ -1,0 +1,25 @@
+[project]
+name = "textprint"
+version = "0.1.0"
+description = "Turn an iMessage export into a narrated, private report using a local LLM."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = [
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
+    "vaderSentiment>=3.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+textprint = "textprint.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["textprint"]
