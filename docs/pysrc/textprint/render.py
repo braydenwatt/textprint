@@ -248,6 +248,13 @@ h1,h2,h3,.f{font-family:Fredoka,system-ui,sans-serif;font-weight:600;letter-spac
 .ipill{display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px}
 .ipill.ok{background:#dcfce7;color:#166534}.ipill.bad{background:#fee2e2;color:#991b1b}.ipill.wait{background:#fef9c3;color:#854d0e}
 .iprog{height:7px;background:#eef1f7;border-radius:5px;overflow:hidden;margin:8px 0 5px}.iprog>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#FA7E1E,#D62976);transition:width .3s}
+.steps{list-style:none;margin:4px 0 0;padding:0;counter-reset:s}
+.steps li{position:relative;padding:0 0 13px 34px;font-size:13.5px;line-height:1.5;color:#334155}
+.steps li:last-child{padding-bottom:2px}
+.steps li:before{counter-increment:s;content:counter(s);position:absolute;left:0;top:-1px;width:23px;height:23px;border-radius:50%;background:linear-gradient(135deg,#f9ce34,#ee2a7b);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:Nunito}
+.steps li:not(:last-child):after{content:"";position:absolute;left:11px;top:24px;bottom:1px;width:2px;background:#f3d9e4}
+.kbd{display:inline-block;background:#f1f3f9;border:1px solid #e2e8f0;border-radius:6px;padding:0 7px;font-size:12px;font-weight:700;color:#1e293b;line-height:18px}
+.kbd.hot{background:#fce7f0;border-color:#f6c2d8;color:#be1e63}
 .appicon .nm{font-size:11.5px;color:#fff;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.45)}
 .igbig{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .igstat{border-radius:18px;padding:14px;color:#fff;min-height:88px;display:flex;flex-direction:column;justify-content:flex-end;position:relative;overflow:hidden}

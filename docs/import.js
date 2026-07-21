@@ -144,8 +144,14 @@
       '<div style=margin-bottom:8px><div class=ilabel>Access token (optional)</div><input class=ifield type=password id=tp_token placeholder="if the host set one"></div>'+
       '<div style=margin-bottom:8px><div class=ilabel>Your first name</div><input class=ifield type=text id=tp_name placeholder="e.g. Alex"></div>'+
       '<button class="impbtn sec" id=tp_test>Test host</button> <span class=legend id=tp_hmsg style="margin:0">The stats work without a host — it only writes the AI reads.</span></div>'+
-     '<div class=card><div class=rowh><h3 class=f>How to get your export</h3></div>'+
-      '<div class=legend style="margin:0;line-height:1.7">Instagram → <b>Settings → Accounts Center → Your information and permissions → Download your information</b> → <b>Messages</b> only, format <b>JSON</b>, quality <b>Low</b>. Instagram emails a ZIP in minutes–days.</div></div>';
+     '<div class=card><div class=rowh><h3 class=f>How to get your export</h3><span class=pill>~ minutes–days</span></div>'+
+      '<ol class=steps>'+
+       '<li>In the Instagram app, open <b>Settings → Accounts Centre</b>.</li>'+
+       '<li>Go to <b>Your information and permissions → Download your information</b>.</li>'+
+       '<li>Select <span class="kbd hot">Messages</span> only.</li>'+
+       '<li>Set format <span class=kbd>JSON</span> and quality <span class=kbd>Low</span>, then submit.</li>'+
+      '</ol>'+
+      '<div class=legend style="margin:10px 0 0;line-height:1.55">Instagram emails a ZIP download link — drop it above, no need to unzip.</div></div>';
     ["proxy","token","name"].forEach(k=>{ const el=$("tp_"+k); if(el){ el.value=LS(k); el.addEventListener("change",e=>setLS(k,e.target.value.trim())); } });
     checkHost();
     $("tp_test").addEventListener("click",checkHost);
