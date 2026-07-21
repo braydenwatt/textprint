@@ -20,6 +20,10 @@ PARSERS = ["instagram.py"]
 OUT.mkdir(parents=True, exist_ok=True)
 (OUT / "parsers").mkdir(exist_ok=True)
 
+# GitHub Pages runs Jekyll, which drops files whose names start with "_"
+# (e.g. __init__.py) -> they 404. .nojekyll disables that so all files serve.
+(ROOT / "docs" / ".nojekyll").write_text("", encoding="utf-8")
+
 for m in MODULES:
     src = PKG / m
     if src.exists():
