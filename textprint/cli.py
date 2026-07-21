@@ -90,9 +90,10 @@ def analyze_source(kind, convos, a, provider):
     tag = kind[:3]
 
     act = lambda c: sum(1 for m in c.messages if m.is_me)   # counts reels too (IG-fair)
+    gmin = a.group_min if getattr(a, "group_min", 0) > 0 else max(10, a.min_messages // 2)
     people_all = sorted([c for c in convos if not c.is_group and act(c) >= a.min_messages],
                         key=lambda c: -act(c))
-    groups = sorted([c for c in convos if c.is_group and act(c) >= max(10, a.min_messages // 2)],
+    groups = sorted([c for c in convos if c.is_group and act(c) >= gmin],
                     key=lambda c: -act(c))[:a.group_limit]
     people = people_all[:a.limit] if a.limit else people_all
     if not people_all:
@@ -107,29 +108,44 @@ def analyze_source(kind, convos, a, provider):
     wrapped = wrap_fn(people_all, all_dossiers, overview, now_date)
     dmap = {c.name: d for c, d in zip(people_all, all_dossiers)}
 
+    # Below the narration cutoff we still include the conversation with all its
+    # deterministic data (stats, charts, fingerprints, deterministic highlights) —
+    # we just don't spend the local LLM narrating small, low-signal chats.
+    nmin = getattr(a, "narrate_min", 0) or 0
+    do_narr = lambda c: nmin <= 0 or act(c) >= nmin
+
     people_data, briefs = [], []
     for i, c in enumerate(people):
         d = dmap[c.name]
-        samples = sample_exchanges(c, n=a.samples)
-        t0 = time.time()
-        print(f"  [{tag} {i+1}/{len(people)}] {c.name} … ", end="", flush=True)
-        narrative = narr_fn(provider, d, samples, temperature=a.temperature)
-        _add_llm_highlights(provider, c, d)
-        print(f"{time.time()-t0:.0f}s", flush=True)
-        people_data.append({"idx": i, "dossier": d, "narrative": narrative})
-        briefs.append(f"{c.name} — {(narrative.strip().splitlines() or ['—'])[0][:200]}")
+        if do_narr(c):
+            samples = sample_exchanges(c, n=a.samples)
+            t0 = time.time()
+            print(f"  [{tag} {i+1}/{len(people)}] {c.name} … ", end="", flush=True)
+            narrative = narr_fn(provider, d, samples, temperature=a.temperature)
+            _add_llm_highlights(provider, c, d)
+            print(f"{time.time()-t0:.0f}s", flush=True)
+            briefs.append(f"{c.name} — {(narrative.strip().splitlines() or ['—'])[0][:200]}")
+        else:
+            narrative = ""
+            print(f"  [{tag} {i+1}/{len(people)}] {c.name} … data only ({act(c)} msgs)", flush=True)
+        people_data.append({"idx": i, "dossier": d, "narrative": narrative, "dataonly": not do_narr(c)})
 
     groups_data = []
     for i, c in enumerate(groups):
         d = dos_fn(c, months)
-        samples = sample_exchanges(c, n=a.samples)
-        t0 = time.time()
-        print(f"  [{tag} grp {i+1}/{len(groups)}] {c.name} … ", end="", flush=True)
-        narrative = narrate_group(provider, d, samples, temperature=a.temperature)
-        _add_llm_highlights(provider, c, d)
-        mreads = member_reads(provider, c.name, member_message_samples(c))
-        print(f"{time.time()-t0:.0f}s", flush=True)
-        groups_data.append({"idx": i, "dossier": d, "narrative": narrative, "member_reads": mreads})
+        if do_narr(c):
+            samples = sample_exchanges(c, n=a.samples)
+            t0 = time.time()
+            print(f"  [{tag} grp {i+1}/{len(groups)}] {c.name} … ", end="", flush=True)
+            narrative = narrate_group(provider, d, samples, temperature=a.temperature)
+            _add_llm_highlights(provider, c, d)
+            mreads = member_reads(provider, c.name, member_message_samples(c))
+            print(f"{time.time()-t0:.0f}s", flush=True)
+        else:
+            narrative, mreads = "", {}
+            print(f"  [{tag} grp {i+1}/{len(groups)}] {c.name} … data only ({act(c)} msgs)", flush=True)
+        groups_data.append({"idx": i, "dossier": d, "narrative": narrative,
+                            "member_reads": mreads, "dataonly": not do_narr(c)})
 
     print(f"  [{kind}] synopsis + personality …", flush=True)
     synopsis = synthesize(provider, global_dossier(people_all), briefs, temperature=a.temperature + .1)
@@ -182,6 +198,11 @@ def main(argv=None):
     an.add_argument("--model", default="qwen2.5:14b")
     an.add_argument("--limit", type=int, default=0, help="top-N contacts (0 = all that qualify)")
     an.add_argument("--group-limit", type=int, default=6, help="top-N group chats")
+    an.add_argument("--group-min", type=int, default=0,
+                    help="min of your own messages for a group to qualify (0 = max(10, min-messages/2))")
+    an.add_argument("--narrate-min", type=int, default=0,
+                    help="only narrate (LLM) conversations with >= this many of your own messages; "
+                         "smaller ones are included with their data but no AI read (0 = narrate all)")
     an.add_argument("--min-messages", type=int, default=40)
     an.add_argument("--min-date", default=None, help="YYYY-MM-DD; drop older messages")
     an.add_argument("--samples", type=int, default=5)

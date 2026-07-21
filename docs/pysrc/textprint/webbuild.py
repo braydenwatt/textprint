@@ -69,7 +69,7 @@ def _brief(d):
 
 
 def build_ig(threads, name="You", title="Textprint", min_date=None,
-             min_messages=25, limit=20, group_limit=6, samples=5):
+             min_messages=1, group_min=1, narrate_min=20, limit=0, group_limit=300, samples=5):
     """threads: list of (folder_name, thread_dict). Returns a JSON-able dict:
     {html, jobs, stats}. jobs: [{slot, system, prompt, temperature, max_tokens, dep?}]."""
     convos = parse_instagram_json(threads)
@@ -80,51 +80,57 @@ def build_ig(threads, name="You", title="Textprint", min_date=None,
     if not convos:
         return {"html": "", "jobs": [], "stats": {"error": "no conversations found"}}
 
-    people_all = sorted([c for c in convos if not c.is_group and _act(c) >= min_messages],
-                        key=lambda c: -_act(c))
-    groups = sorted([c for c in convos if c.is_group and _act(c) >= max(10, min_messages // 2)],
+    people = sorted([c for c in convos if not c.is_group and _act(c) >= min_messages],
+                    key=lambda c: -_act(c))
+    if limit:
+        people = people[:limit]
+    groups = sorted([c for c in convos if c.is_group and _act(c) >= group_min],
                     key=lambda c: -_act(c))[:group_limit]
-    people = people_all[:limit] if limit else people_all
     if not people:
         return {"html": "", "jobs": [], "stats": {"error": "no contacts met the threshold"}}
+    do_narr = lambda c: narrate_min <= 0 or _act(c) >= narrate_min
 
     overview = ig_overview(convos)
     months = overview["months"]
     now_date = max((m.ts.date() for c in convos for m in c.messages), default=date.today())
-    dossiers = [ig_dossier(c, months) for c in people_all]
-    wrapped = ig_wrapped(people_all, dossiers, overview, now_date)
+    dossiers = [ig_dossier(c, months) for c in people]
+    wrapped = ig_wrapped(people, dossiers, overview, now_date)
 
+    # small, low-signal chats are included with their data but get no LLM job
     jobs = []
     people_data = []
     for i, c in enumerate(people):
         d = dossiers[i]
-        sm = sample_exchanges(c, n=samples)
-        system, prompt = ig_prompt(d, sm)
-        jobs.append({"slot": {"app": "instagram", "kind": "person", "idx": i},
-                     "system": system, "prompt": prompt, "temperature": 0.4, "max_tokens": 520})
-        hl = _highlight_job(c, {"app": "instagram", "kind": "highlights", "target": "person", "idx": i})
-        if hl:
-            jobs.append(hl)
-        people_data.append({"idx": i, "dossier": d, "narrative": ""})
+        if do_narr(c):
+            sm = sample_exchanges(c, n=samples)
+            system, prompt = ig_prompt(d, sm)
+            jobs.append({"slot": {"app": "instagram", "kind": "person", "idx": i},
+                         "system": system, "prompt": prompt, "temperature": 0.4, "max_tokens": 520})
+            hl = _highlight_job(c, {"app": "instagram", "kind": "highlights", "target": "person", "idx": i})
+            if hl:
+                jobs.append(hl)
+        people_data.append({"idx": i, "dossier": d, "narrative": "", "dataonly": not do_narr(c)})
 
     groups_data = []
     for i, c in enumerate(groups):
         d = ig_dossier(c, months)
-        sm = sample_exchanges(c, n=samples)
-        system, prompt = group_prompt(d, sm)
-        jobs.append({"slot": {"app": "instagram", "kind": "group", "idx": i},
-                     "system": system, "prompt": prompt, "temperature": 0.4, "max_tokens": 520})
-        hl = _highlight_job(c, {"app": "instagram", "kind": "highlights", "target": "group", "idx": i})
-        if hl:
-            jobs.append(hl)
-        mr = _member_reads_job(c, i)
-        if mr:
-            jobs.append(mr)
-        groups_data.append({"idx": i, "dossier": d, "narrative": "", "member_reads": {}})
+        if do_narr(c):
+            sm = sample_exchanges(c, n=samples)
+            system, prompt = group_prompt(d, sm)
+            jobs.append({"slot": {"app": "instagram", "kind": "group", "idx": i},
+                         "system": system, "prompt": prompt, "temperature": 0.4, "max_tokens": 520})
+            hl = _highlight_job(c, {"app": "instagram", "kind": "highlights", "target": "group", "idx": i})
+            if hl:
+                jobs.append(hl)
+            mr = _member_reads_job(c, i)
+            if mr:
+                jobs.append(mr)
+        groups_data.append({"idx": i, "dossier": d, "narrative": "",
+                            "member_reads": {}, "dataonly": not do_narr(c)})
 
-    # synopsis (deterministic briefs → independent) then persona (depends on synopsis)
-    briefs = [_brief(dossiers[i]) for i in range(len(people))]
-    s_sys, s_prompt = synth_prompt(global_dossier(people_all), briefs)
+    # synopsis (deterministic briefs from the narrated contacts) then persona
+    briefs = [_brief(dossiers[i]) for i, c in enumerate(people) if do_narr(c)][:30]
+    s_sys, s_prompt = synth_prompt(global_dossier(people), briefs)
     jobs.append({"slot": {"app": "instagram", "kind": "synopsis"},
                  "system": s_sys, "prompt": s_prompt, "temperature": 0.6, "max_tokens": 620})
     p_sys, _ = persona_prompt("")
@@ -137,4 +143,5 @@ def build_ig(threads, name="You", title="Textprint", min_date=None,
     app = {"id": "instagram", "name": "Instagram", "accent": ACCENT, "data": data}
     return {"apps": [app], "name": name or "You", "jobs": jobs,
             "stats": {"people": len(people), "groups": len(groups),
-                      "people_total": len(people_all), "reads": len(jobs)}}
+                      "narrated": sum(1 for c in people if do_narr(c)) + sum(1 for c in groups if do_narr(c)),
+                      "reads": len(jobs)}}

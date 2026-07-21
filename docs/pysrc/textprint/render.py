@@ -50,10 +50,16 @@ def _chat_entry(d, narrative, color, mreads=None):
 
 
 def build_data(name, overview, personality, people, groups, synopsis, wrapped, platform="imessage"):
-    peo = [_chat_entry(c["dossier"], c["narrative"], PALETTE[i % len(PALETTE)])
-           for i, c in enumerate(people)]
-    grp = [_chat_entry(c["dossier"], c["narrative"], PALETTE[i % len(PALETTE)], c.get("member_reads"))
-           for i, c in enumerate(groups)]
+    peo = []
+    for i, c in enumerate(people):
+        e = _chat_entry(c["dossier"], c["narrative"], PALETTE[i % len(PALETTE)])
+        e["dataOnly"] = bool(c.get("dataonly"))
+        peo.append(e)
+    grp = []
+    for i, c in enumerate(groups):
+        e = _chat_entry(c["dossier"], c["narrative"], PALETTE[i % len(PALETTE)], c.get("member_reads"))
+        e["dataOnly"] = bool(c.get("dataonly"))
+        grp.append(e)
     mood = overview["mood"]
     tot = max(1, mood["pos"] + mood["neu"] + mood["neg"])
     return {
@@ -448,7 +454,7 @@ function detail(tab,i){const p=(tab=='gr'?D.groups:D.people)[i];scr.className='s
  <div class=statrow><div class=stat title="total messages exchanged"><div class=n>${kk(p.msgs)}</div><div class=l>messages</div></div>
   <div class=stat title="how long you typically take to first reply after a lull"><div class=n>${p.reply}</div><div class=l>your response</div></div>
   <div class=stat title="avg sentiment of your messages (-1 to +1)"><div class=n>${p.mood>0?'+':''}${p.mood}</div><div class=l>your mood</div></div></div>
- ${(p.narr||window.TP_NARRATING||APP.live)?`<div class=card><div class=rowh><h3 class=f>The read</h3><span class=pill>AI · on-device</span></div><div class=narr id=narr-${tab=='gr'?'group':'person'}-${i}>${p.narr?narrBlocks(p.narr):narrPh(4)}</div></div>`:''}
+ ${(p.narr||(!p.dataOnly&&(window.TP_NARRATING||APP.live)))?`<div class=card><div class=rowh><h3 class=f>The read</h3><span class=pill>AI · on-device</span></div><div class=narr id=narr-${tab=='gr'?'group':'person'}-${i}>${p.narr?narrBlocks(p.narr):narrPh(4)}</div></div>`:''}
  <div class=card id=hlcard style="${(p.highlights&&p.highlights.length)?'':'display:none'}">${hlInner(p)}</div>
  ${mid}
  ${p.ig?igContactCard(p):''}
