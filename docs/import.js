@@ -11,7 +11,7 @@
   const $=id=>document.getElementById(id);
 
   // ---- cache the built report so a return visit needs no re-upload ----
-  const CACHE_KEY="tp_report", CACHE_VER=1;
+  const CACHE_KEY="tp_report", CACHE_VER=2;   // bump to drop stale caches when the build changes
   let cacheFull=false;   // true once cached; used to warn on quota
   function saveCache(){
     try{ localStorage.setItem(CACHE_KEY, JSON.stringify({v:CACHE_VER, name:APP.name, apps:APPS}));

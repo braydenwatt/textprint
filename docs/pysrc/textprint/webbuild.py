@@ -69,7 +69,7 @@ def _brief(d):
 
 
 def build_ig(threads, name="You", title="Textprint", min_date=None,
-             min_messages=1, group_min=1, narrate_min=20, limit=0, group_limit=300, samples=5):
+             min_messages=3, group_min=3, narrate_min=20, limit=0, group_limit=300, samples=5):
     """threads: list of (folder_name, thread_dict). Returns a JSON-able dict:
     {html, jobs, stats}. jobs: [{slot, system, prompt, temperature, max_tokens, dep?}]."""
     convos = parse_instagram_json(threads)
