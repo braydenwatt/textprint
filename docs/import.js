@@ -10,6 +10,26 @@
   const setLS=(k,v)=>localStorage.setItem("tp_"+k,v);
   const $=id=>document.getElementById(id);
 
+  // ---- cache the built report so a return visit needs no re-upload ----
+  const CACHE_KEY="tp_report", CACHE_VER=1;
+  let cacheFull=false;   // true once cached; used to warn on quota
+  function saveCache(){
+    try{ localStorage.setItem(CACHE_KEY, JSON.stringify({v:CACHE_VER, name:APP.name, apps:APPS}));
+         cacheFull=false; return true; }
+    catch(e){ cacheFull=true; console.warn("cache save failed (probably quota)", e); return false; }
+  }
+  function loadCache(){
+    try{ const raw=localStorage.getItem(CACHE_KEY); if(!raw)return null; const j=JSON.parse(raw);
+         return (j&&j.v===CACHE_VER&&j.apps&&j.apps.length)?j:null; }
+    catch(e){ return null; }
+  }
+  function clearCache(){ localStorage.removeItem(CACHE_KEY); }
+  function restoreCache(){
+    const j=loadCache(); if(!j) return false;
+    APP.name=j.name||"You"; APPS.length=0; j.apps.forEach(a=>APPS.push(a));
+    window.TP_NARRATING=false; window.showHome(); return true;
+  }
+
   function prog(pct,msg){ const b=$("tp_bar"), s=$("tp_step"); if(b&&pct!=null)b.style.width=pct+"%"; if(s&&msg!=null&&msg!=="")s.textContent=msg; }
 
   async function checkHost(){
@@ -71,7 +91,8 @@
     else window.TP_UPDATE(job.slot,text);
   }
   async function narrate(jobs){
-    const ok=await checkHost(); if(!ok){ prog(100,"Report ready — no host, so AI reads were skipped."); return; }
+    const ok=await checkHost(); if(!ok){ prog(100,"Report ready — no host, so AI reads were skipped."); saveCache(); return; }
+    window.TP_NARRATING=true;
     const indep=jobs.filter(j=>!j.dep), dep=jobs.filter(j=>j.dep), results={}; let done=0; const total=jobs.length;
     const tick=()=>prog(80+done/total*20, "writing reads… "+done+"/"+total); tick();
     const queue=[...indep];
@@ -83,7 +104,9 @@
       done++; tick();
     }}
     await Promise.all([worker(),worker(),worker()]);
-    prog(100, "Done — "+done+"/"+total+" reads written.");
+    window.TP_NARRATING=false;
+    saveCache();   // persist the full report (with reads) for return visits
+    prog(100, "Done — "+done+"/"+total+" reads written." + (cacheFull?" (too big to cache)":" Saved — no re-upload next time."));
   }
 
   async function run(blob){
@@ -106,8 +129,13 @@
 
   window.tpMountImport=function(){
     const m=$("importmount"); if(!m) return;
-    m.innerHTML=
-     '<div class=card><div class=rowh><h3 class=f>Import your Instagram</h3><span class="ipill ok">on-device</span></div>'+
+    const have=window.hasData&&window.hasData();
+    const dataCard=have?
+     ('<div class=card><div class=rowh><h3 class=f>Your data</h3><span class="ipill ok">saved on this device</span></div>'+
+      '<div class=legend style="margin:0 0 10px;line-height:1.6">Your report is cached in this browser, so it loads instantly and you don’t need to re-upload. Clearing removes it from this device only.</div>'+
+      '<button class="impbtn" id=tp_open>Open Instagram</button> <button class="impbtn sec" id=tp_clear>Clear data</button></div>'):'';
+    m.innerHTML= dataCard +
+     '<div class=card><div class=rowh><h3 class=f>'+(have?'Re-import':'Import your Instagram')+'</h3><span class="ipill ok">on-device</span></div>'+
       '<div class=legend style="margin:0 0 10px;line-height:1.6">Everything is parsed and analysed in your browser — your export never leaves this device.</div>'+
       '<div class=idrop id=tp_drop><div class=big>📩</div><div class=t>Drop your Instagram export ZIP</div><div class=s>or tap to choose · no need to unzip</div><input type=file id=tp_file accept=".zip,application/zip" hidden></div>'+
       '<div id=tp_stage style="margin-top:10px;display:none"><div class=legend id=tp_step style=margin:0>starting…</div><div class=iprog><i id=tp_bar></i></div></div></div>'+
@@ -127,8 +155,11 @@
     ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
     ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
     drop.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f) start(f); });
+    if($("tp_open")) $("tp_open").addEventListener("click",()=>window.openApp("instagram"));
+    if($("tp_clear")) $("tp_clear").addEventListener("click",()=>{ clearCache(); APPS.length=0; APP.name="You"; window.TP_NARRATING=false; window.showHome(); });
   };
 
-  // if the visitor is already on Settings when this script finishes loading, mount now
+  // on load: restore a previously cached report so return visits need no re-upload
+  restoreCache();
   if(document.getElementById("importmount")) window.tpMountImport();
 })();

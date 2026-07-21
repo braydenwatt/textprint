@@ -369,7 +369,7 @@ function igHero(){const ig=D.ig,mix=ig.mix,cols={reels:'#E1306C',text:'#405DE6',
   <div class=igbig>
    <div class=igstat style="background:linear-gradient(135deg,#f9ce34,#ee2a7b)"><span class=em>🎬</span><div class=n>${kk(ig.reels)}</div><div class=l>reels & posts shared</div></div>
    <div class=igstat style="background:linear-gradient(135deg,#833ab4,#fd1d1d)"><span class=em>❤️</span><div class=n>${num(ig.react_given+ig.react_recv)}</div><div class=l>reactions traded</div></div></div>
-  <div class=card><div class=rowh><h3 class=f>Content mix</h3><span class=pill>how you actually DM</span></div>
+  <div class="card" style="margin-top:20px"><div class=rowh><h3 class=f>Content mix</h3><span class=pill>how you actually DM</span></div>
    <div class=mixbar>${mix.map(x=>`<i title="${num(x.n)} ${x.k}" style="width:${x.pct}%;background:${cols[x.k]}"></i>`).join('')}</div>
    <div class=legend>${mix.map(x=>`<span><span class=dot style=background:${cols[x.k]}></span>${x.pct}% ${x.k}</span>`).join('')}</div></div>
   <div class=card><div class=rowh><h3 class=f>Your reel taste</h3><span class=pill>most-shared creators</span></div>
@@ -392,7 +392,7 @@ function youTab(){const m=D.me;scr.className='screen fade';scr.innerHTML=`
  <div class=topbar><div class="title f">You</div></div>
  <div class=dhead><div class=av style="background:var(--grad);width:82px;height:82px;font-size:30px">${init(m.name)}</div><div class=f style=font-size:22px>${esc(m.name)}</div><div class=sub>${m.contacts} people · ${kk(m.words)} words written</div></div>
  <div class=statrow><div class=stat><div class=n>${kk(m.sent)}</div><div class=l>sent</div></div><div class=stat><div class=n>${kk(m.received)}</div><div class=l>received</div></div><div class=stat><div class=n>${m.busy}</div><div class=l>busiest day</div></div></div>
- <div class=card><div class=rowh><h3 class=f>How you text</h3><span class=pill>AI · on-device</span></div><div class=narr id=synopsis>${m.synopsis?narrBlocks(m.synopsis):genInner(5)}</div></div>
+ <div class=card><div class=rowh><h3 class=f>How you text</h3><span class=pill>AI · on-device</span></div><div class=narr id=synopsis>${m.synopsis?narrBlocks(m.synopsis):narrPh(5)}</div></div>
  <div class=card><div class=rowh><h3 class=f>Private by design</h3></div><div class=legend style=margin:0>Everything here was computed on your machine. No message ever left the device.</div></div>`}
 
 function detail(tab,i){const p=(tab=='gr'?D.groups:D.people)[i];scr.className='screen fade';
@@ -432,7 +432,7 @@ function detail(tab,i){const p=(tab=='gr'?D.groups:D.people)[i];scr.className='s
  <div class=statrow><div class=stat title="total messages exchanged"><div class=n>${kk(p.msgs)}</div><div class=l>messages</div></div>
   <div class=stat title="how long you typically take to first reply after a lull"><div class=n>${p.reply}</div><div class=l>your response</div></div>
   <div class=stat title="avg sentiment of your messages (-1 to +1)"><div class=n>${p.mood>0?'+':''}${p.mood}</div><div class=l>your mood</div></div></div>
- <div class=card><div class=rowh><h3 class=f>The read</h3><span class=pill>AI · on-device</span></div><div class=narr id=narr-${tab=='gr'?'group':'person'}-${i}>${p.narr?narrBlocks(p.narr):genInner(4)}</div></div>
+ <div class=card><div class=rowh><h3 class=f>The read</h3><span class=pill>AI · on-device</span></div><div class=narr id=narr-${tab=='gr'?'group':'person'}-${i}>${p.narr?narrBlocks(p.narr):narrPh(4)}</div></div>
  <div class=card id=hlcard style="${(p.highlights&&p.highlights.length)?'':'display:none'}">${hlInner(p)}</div>
  ${mid}
  ${p.ig?igContactCard(p):''}
@@ -520,6 +520,7 @@ function settingsScreen(){scr.className='screen fade';
 }
 function narrBlocks(t){return t.split(String.fromCharCode(10)).filter(x=>x.trim()).map(x=>`<p style=margin:0 0 10px>${x}</p>`).join('')||('<p>'+t+'</p>')}
 function genInner(n){const w=[94,86,96,72,82];return '<div class=gen>'+Array.from({length:n}).map((_,i)=>`<div class=gl style=width:${w[i%w.length]}%></div>`).join('')+'<div class=genlbl>writing the read…</div></div>'}
+function narrPh(n){return window.TP_NARRATING?genInner(n):'<div class=legend style="margin:0">No AI read yet — add a host in Settings, then re-import.</div>'}
 function parsePersonaJS(raw){let title='Your Textprint',tag='';raw.split(String.fromCharCode(10)).forEach(l=>{const low=l.toLowerCase();if(low.startsWith('title:'))title=l.split(':').slice(1).join(':').trim().replace(/^"|"$/g,'')||title;else if(low.startsWith('tagline:'))tag=l.split(':').slice(1).join(':').trim().replace(/^"|"$/g,'')});return{title:title,blurb:tag}}
 function hlInner(p){if(!p.highlights||!p.highlights.length)return '';return '<div class=rowh><h3 class=f>Message highlights</h3><span class=pill>real messages</span></div>'+p.highlights.map(h=>`<div class=hltag>${esc(h.tag)}${h.react&&h.react.length?' '+h.react.join(''):''} · ${h.date}</div><div class="hlrow ${h.me?'me':'them'}"><div class=bub>${(!h.me&&p.group)?`<div class=bubwho>${esc(h.who)}</div>`:''}${esc(h.text)}</div></div>`).join('')}
 // live narration patch (from the host page as reads stream back from the proxy)
@@ -546,7 +547,7 @@ window.addEventListener('message',function(ev){const d=ev.data||{};
  else if(d.type=='tp-ping'&&ev.source)ev.source.postMessage({type:'tp-ready'},'*')});
 window.TP_UPDATE=TP_UPDATE;window.TP_HL=TP_HL;window.TP_MEM=TP_MEM;
 window.go=go;window.detail=detail;window.filterC=filterC;window.showHome=showHome;window.openApp=openApp;
-window.APP=APP;window.APPS=APPS;window.hasData=function(){return APPS&&APPS.length>0};
+window.APP=APP;window.APPS=APPS;window.hasData=function(){return APPS&&APPS.length>0};window.TP_NARRATING=false;
 showHome();
 try{if(window.parent&&window.parent!==window)window.parent.postMessage({type:'tp-ready'},'*')}catch(e){}
 </script>__LIBS__</body></html>"""
