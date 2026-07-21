@@ -39,7 +39,7 @@ from textprint.providers.ollama import OllamaProvider
 # ── config (all overridable by env) ─────────────────────────────────────────
 ORIGINS = [o.strip() for o in os.environ.get(
     "TEXTPRINT_ORIGINS",
-    "http://localhost:8014,http://127.0.0.1:8014,http://localhost:5173").split(",") if o.strip()]
+    "https://braydenwatt.github.io,http://localhost:8014,http://127.0.0.1:8014,http://localhost:5173").split(",") if o.strip()]
 MODEL = os.environ.get("TEXTPRINT_MODEL", "qwen2.5:14b")
 OLLAMA_HOST = os.environ.get("TEXTPRINT_OLLAMA", "http://localhost:11434")
 TOKEN = os.environ.get("TEXTPRINT_TOKEN", "")          # "" disables the check
