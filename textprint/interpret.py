@@ -139,12 +139,12 @@ HIGHLIGHT_SYS = (
 )
 
 
-def pick_highlights(provider, numbered, temperature=0.5):
-    """numbered: list of (idx, 'Who: text'). Returns [(idx, label)]."""
-    if len(numbered) < 6:
-        return []
-    prompt = "Messages:\n" + "\n".join(f"{i}. {t}" for i, t in numbered)
-    raw = provider.complete(HIGHLIGHT_SYS, prompt, temperature=temperature, max_tokens=140)
+def highlight_prompt(numbered):
+    return HIGHLIGHT_SYS, "Messages:\n" + "\n".join(f"{i}. {t}" for i, t in numbered)
+
+
+def parse_highlights(raw):
+    """Raw '<num> || <label>' lines -> [(idx, label)] (≤3)."""
     out = []
     for line in raw.splitlines():
         if "||" not in line:
@@ -156,21 +156,41 @@ def pick_highlights(provider, numbered, temperature=0.5):
     return out[:3]
 
 
-def member_reads(provider, group_name, member_samples, temperature=0.5):
-    """member_samples: list of (name, [message strings]). Returns {name: one-line read}."""
+def pick_highlights(provider, numbered, temperature=0.5):
+    """numbered: list of (idx, 'Who: text'). Returns [(idx, label)]."""
+    if len(numbered) < 6:
+        return []
+    system, prompt = highlight_prompt(numbered)
+    raw = provider.complete(system, prompt, temperature=temperature, max_tokens=140)
+    return parse_highlights(raw)
+
+
+def members_prompt(group_name, member_samples):
     parts = []
     for name, msgs in member_samples:
         joined = " / ".join(m.replace("\n", " ")[:120] for m in msgs[:14])
         parts.append(f"### {name}\n{joined}")
-    prompt = (f'Group chat "{group_name}". Characterize each member below.\n\n'
-              + "\n\n".join(parts))
-    raw = provider.complete(MEMBERS_SYS, prompt, temperature=temperature, max_tokens=360)
+    return MEMBERS_SYS, (f'Group chat "{group_name}". Characterize each member below.\n\n'
+                         + "\n\n".join(parts))
+
+
+def parse_member_reads(raw):
+    """Raw '<Name> || <read>' lines -> {name: read}."""
     out = {}
     for line in raw.splitlines():
         if "||" in line:
             nm, read = line.split("||", 1)
             out[nm.strip().lstrip("-• ").strip()] = read.strip()
     return out
+
+
+def member_reads(provider, group_name, member_samples, temperature=0.5):
+    """member_samples: list of (name, [message strings]). Returns {name: one-line read}."""
+    if not member_samples:
+        return {}
+    system, prompt = members_prompt(group_name, member_samples)
+    raw = provider.complete(system, prompt, temperature=temperature, max_tokens=360)
+    return parse_member_reads(raw)
 
 
 PERSONA_SYS = (

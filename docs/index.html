@@ -186,6 +186,17 @@ async function callProxy(job){
   throw new Error("host busy");
 }
 function post(slot,text){ if(reportWin) reportWin.postMessage({type:"tp-narr",slot,text},"*"); }
+function parseHLpicks(raw){ const out=[]; raw.split("\n").forEach(l=>{ if(l.indexOf("||")<0)return; const p=l.split("||"); const num=(p[0].match(/\d+/)||[])[0]; if(num!=null) out.push([+num, p.slice(1).join("||").trim().replace(/^"|"$/g,"").slice(0,44)]); }); return out.slice(0,3); }
+function parseMembers(raw){ const out={}; raw.split("\n").forEach(l=>{ const i=l.indexOf("||"); if(i<0)return; const nm=l.slice(0,i).trim().replace(/^[-•\s]+/,"").trim(); const rd=l.slice(i+2).trim(); if(nm) out[nm]=rd; }); return out; }
+function deliver(job,text){
+  if(!reportWin) return;
+  if(job.post==="highlights"){
+    const items=[]; parseHLpicks(text).forEach(([idx,label])=>{ const m=job.pool&&job.pool[idx]; if(m) items.push({text:m.text,who:m.who,me:m.me,date:m.date,tag:label,react:m.react}); });
+    reportWin.postMessage({type:"tp-highlights",slot:job.slot,items},"*");
+  } else if(job.post==="member_reads"){
+    reportWin.postMessage({type:"tp-members",slot:job.slot,reads:parseMembers(text)},"*");
+  } else { post(job.slot,text); }
+}
 
 async function narrate(jobs){
   const hostOk=await checkHost();
@@ -200,7 +211,7 @@ async function narrate(jobs){
   async function worker(){
     while(queue.length){
       const job=queue.shift();
-      try{ const text=await callProxy(job); if(job.slot.kind==="synopsis") results["synopsis"]=text; post(job.slot,text);
+      try{ const text=await callProxy(job); if(job.slot.kind==="synopsis") results["synopsis"]=text; deliver(job,text);
             // release any dependents now satisfied
             for(const d of dep.slice()){ if(results[d.dep]!=null){ dep.splice(dep.indexOf(d),1);
               const jb={...d, prompt:d.prompt.replace("{{SYNOPSIS}}", results[d.dep])};

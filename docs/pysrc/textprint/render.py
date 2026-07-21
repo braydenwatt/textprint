@@ -243,7 +243,7 @@ h1,h2,h3,.f{font-family:Fredoka,system-ui,sans-serif;font-weight:600;letter-spac
 <div class=phone><div class=notch></div><div class=screen id=screen></div><nav class=nav id=nav></nav><div class=hb onclick=showHome()></div></div>
 <script>
 const APP=__DATA__;const APPS=APP.apps;
-let D=null,CUR=null;
+let D=null,CUR=null,CURDET=null,CURMEM=null;
 const SVG={
  overview:'<svg viewBox="0 0 24 24" fill=none stroke=currentColor stroke-width=2 stroke-linecap=round stroke-linejoin=round><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></svg>',
  people:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
@@ -305,12 +305,13 @@ function igContactCard(p){const ig=p.ig,tot=(ig.reels+ig.text_me+ig.text_them)||
 function spd(t){if(t==='—')return 8;const s=t.endsWith('s')?parseFloat(t):t.endsWith('m')?parseFloat(t)*60:t.endsWith('h')?parseFloat(t)*3600:parseFloat(t)*86400;return Math.max(8,Math.min(100,100-Math.log(Math.max(s,20)/20)/Math.log(3600/20)*100)).toFixed(0)}
 function durS(s){if(s==null)return '—';return s<60?Math.round(s)+'s':s<3600?Math.round(s/60)+'m':s<86400?(s/3600).toFixed(1)+'h':(s/86400).toFixed(1)+'d'}
 function memberDetail(gi,mi){const g=D.groups[gi],m=g.members[mi],pr=m.prof||{},col=mcolor(m,mi);const rt=pr.reply_med_s,rtot=((pr.given||0)+(pr.recv||0))||1;scr.className='screen fade';
+ CURMEM={app:CUR&&CUR.id,gi:gi,mi:mi};CURDET=null;
  scr.innerHTML=`<span class=back onclick="detail('gr',${gi})">${SVG.back} ${esc(g.n)}</span>
   <div class=dhead><div class=av style="background:${col}">${init(m.name)}</div><div class=f style=font-size:22px>${esc(m.name)}${m.me?' (you)':''}</div><div class=sub>in “${esc(g.n)}” · ${m.share}% of all messages</div></div>
   <div class=statrow><div class=stat title="messages in this group"><div class=n>${kk(m.msgs)}</div><div class=l>messages</div></div>
    <div class=stat title="their words per message"><div class=n>${pr.wpm!=null?pr.wpm:'—'}</div><div class=l>words/msg</div></div>
    <div class=stat title="how fast they jump into the chat"><div class=n>${durS(rt)}</div><div class=l>reply speed</div></div></div>
-  ${m.read?`<div class=card><div class=rowh><h3 class=f>Their vibe</h3><span class=pill>AI · on-device</span></div><div class=narr>${esc(m.read)}</div></div>`:''}
+  <div class=card id=mbvibe style="${m.read?'':'display:none'}">${m.read?`<div class=rowh><h3 class=f>Their vibe</h3><span class=pill>AI · on-device</span></div><div class=narr>${esc(m.read)}</div>`:''}</div>
   <div class=card><div class=rowh><h3 class=f>How they show up</h3></div>
    <div class=rt title="time from someone else's message to theirs"><span class=k>Reply speed</span><span class=bar><i style="width:${spd(durS(rt))}%;background:${col}"></i></span><span class=v>${durS(rt)}</span></div>
    <div class=legend>starts a fresh thread <b>${pr.starts||0}×</b> · most active in the <b>${pr.peak||'—'}</b></div></div>
@@ -377,6 +378,7 @@ function youTab(){const m=D.me;scr.className='screen fade';scr.innerHTML=`
  <div class=card><div class=rowh><h3 class=f>Private by design</h3></div><div class=legend style=margin:0>Everything here was computed on your machine. No message ever left the device.</div></div>`}
 
 function detail(tab,i){const p=(tab=='gr'?D.groups:D.people)[i];scr.className='screen fade';
+ CURDET={app:CUR&&CUR.id,kind:tab=='gr'?'group':'person',idx:i};CURMEM=null;
  const smx=Math.max(1,...p.stars),sp=p.split,spt=Math.max(1,sp.pos+sp.neu+sp.neg);
  const pc=v=>(100*v/spt).toFixed(0);
  let mid;
@@ -413,8 +415,7 @@ function detail(tab,i){const p=(tab=='gr'?D.groups:D.people)[i];scr.className='s
   <div class=stat title="how long you typically take to first reply after a lull"><div class=n>${p.reply}</div><div class=l>your response</div></div>
   <div class=stat title="avg sentiment of your messages (-1 to +1)"><div class=n>${p.mood>0?'+':''}${p.mood}</div><div class=l>your mood</div></div></div>
  <div class=card><div class=rowh><h3 class=f>The read</h3><span class=pill>AI · on-device</span></div><div class=narr id=narr-${tab=='gr'?'group':'person'}-${i}>${p.narr?narrBlocks(p.narr):genInner(4)}</div></div>
- ${p.highlights&&p.highlights.length?`<div class=card><div class=rowh><h3 class=f>Message highlights</h3><span class=pill>real messages</span></div>
-  ${p.highlights.map(h=>`<div class=hltag>${esc(h.tag)}${h.react?' '+h.react.join(''):''} · ${h.date}</div><div class="hlrow ${h.me?'me':'them'}"><div class=bub>${(!h.me&&p.group)?`<div class=bubwho>${esc(h.who)}</div>`:''}${esc(h.text)}</div></div>`).join('')}</div>`:''}
+ <div class=card id=hlcard style="${(p.highlights&&p.highlights.length)?'':'display:none'}">${hlInner(p)}</div>
  ${mid}
  ${p.ig?igContactCard(p):''}
  <div class=card><div class=rowh><h3 class=f>Monthly rhythm</h3><span class=pill>messages / month</span></div>${monthlyChart(p.spark,p.c)}<div class=legend>${p.period[0]} → ${p.period[1]}</div></div>
@@ -489,6 +490,7 @@ function settingsScreen(){scr.className='screen fade';
 function narrBlocks(t){return t.split(String.fromCharCode(10)).filter(x=>x.trim()).map(x=>`<p style=margin:0 0 10px>${x}</p>`).join('')||('<p>'+t+'</p>')}
 function genInner(n){const w=[94,86,96,72,82];return '<div class=gen>'+Array.from({length:n}).map((_,i)=>`<div class=gl style=width:${w[i%w.length]}%></div>`).join('')+'<div class=genlbl>writing the read…</div></div>'}
 function parsePersonaJS(raw){let title='Your Textprint',tag='';raw.split(String.fromCharCode(10)).forEach(l=>{const low=l.toLowerCase();if(low.startsWith('title:'))title=l.split(':').slice(1).join(':').trim().replace(/^"|"$/g,'')||title;else if(low.startsWith('tagline:'))tag=l.split(':').slice(1).join(':').trim().replace(/^"|"$/g,'')});return{title:title,blurb:tag}}
+function hlInner(p){if(!p.highlights||!p.highlights.length)return '';return '<div class=rowh><h3 class=f>Message highlights</h3><span class=pill>real messages</span></div>'+p.highlights.map(h=>`<div class=hltag>${esc(h.tag)}${h.react&&h.react.length?' '+h.react.join(''):''} · ${h.date}</div><div class="hlrow ${h.me?'me':'them'}"><div class=bub>${(!h.me&&p.group)?`<div class=bubwho>${esc(h.who)}</div>`:''}${esc(h.text)}</div></div>`).join('')}
 // live narration patch (from the host page as reads stream back from the proxy)
 function TP_UPDATE(slot,raw){const app=APPS.find(a=>a.id==slot.app);if(!app||!raw)return;const ad=app.data,here=CUR&&CUR.id==slot.app;
  if(slot.kind=='person'||slot.kind=='group'){const arr=slot.kind=='group'?ad.groups:ad.people,e=arr&&arr[slot.idx];if(!e)return;
@@ -497,7 +499,20 @@ function TP_UPDATE(slot,raw){const app=APPS.find(a=>a.id==slot.app);if(!app||!ra
  else if(slot.kind=='synopsis'){ad.me.synopsis=esc(raw);const el=document.getElementById('synopsis');if(el&&here)el.innerHTML=narrBlocks(ad.me.synopsis)}
  else if(slot.kind=='persona'){const pp=parsePersonaJS(raw);ad.me.persona.t=esc(pp.title);ad.me.persona.b=esc(pp.blurb);
   if(here&&active=='ov'){const t=document.getElementById('persona-t'),b=document.getElementById('persona-b');if(t)t.innerHTML=ad.me.persona.t;if(b)b.innerHTML=ad.me.persona.b}}}
-window.addEventListener('message',function(ev){const d=ev.data||{};if(d.type=='tp-narr')TP_UPDATE(d.slot,d.text);if(d.type=='tp-ping'&&ev.source)ev.source.postMessage({type:'tp-ready'},'*')});
+function TP_HL(slot,items){const app=APPS.find(a=>a.id==slot.app);if(!app||!items||!items.length)return;const ad=app.data;
+ const arr=slot.target=='group'?ad.groups:ad.people,e=arr&&arr[slot.idx];if(!e)return;e.highlights=e.highlights||[];
+ const have=new Set(e.highlights.map(h=>(h.text||'').slice(0,50)));
+ items.forEach(it=>{const k=(it.text||'').slice(0,50);if(!have.has(k)){have.add(k);e.highlights.push(it)}});
+ if(CURDET&&CURDET.app==slot.app&&CURDET.kind==slot.target&&CURDET.idx==slot.idx){const c=document.getElementById('hlcard');if(c){c.style.display='';c.innerHTML=hlInner(e)}}}
+function TP_MEM(slot,reads){const app=APPS.find(a=>a.id==slot.app);if(!app||!reads)return;const g=app.data.groups[slot.idx];if(!g)return;
+ (g.members||[]).forEach(m=>{if(reads[m.name])m.read=esc(reads[m.name])});
+ if(CURMEM&&CURMEM.app==slot.app&&CURMEM.gi==slot.idx){const m=g.members[CURMEM.mi],c=document.getElementById('mbvibe');
+  if(c&&m&&m.read){c.style.display='';c.innerHTML='<div class=rowh><h3 class=f>Their vibe</h3><span class=pill>AI · on-device</span></div><div class=narr>'+m.read+'</div>'}}}
+window.addEventListener('message',function(ev){const d=ev.data||{};
+ if(d.type=='tp-narr')TP_UPDATE(d.slot,d.text);
+ else if(d.type=='tp-highlights')TP_HL(d.slot,d.items);
+ else if(d.type=='tp-members')TP_MEM(d.slot,d.reads);
+ else if(d.type=='tp-ping'&&ev.source)ev.source.postMessage({type:'tp-ready'},'*')});
 window.TP_UPDATE=TP_UPDATE;
 window.go=go;window.detail=detail;window.filterC=filterC;window.showHome=showHome;window.openApp=openApp;
 showHome();

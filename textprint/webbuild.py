@@ -11,13 +11,49 @@ in Pyodide with no wheels.
 from datetime import date
 
 from .ig_stats import ig_dossier, ig_overview, ig_wrapped
-from .interpret import group_prompt, ig_prompt, persona_prompt, synth_prompt
+from .interpret import (group_prompt, highlight_prompt, ig_prompt, members_prompt,
+                        persona_prompt, synth_prompt)
 from .parsers.instagram import parse_instagram_json
 from .render import build_data, render_html
-from .sampler import sample_exchanges
+from .sampler import member_message_samples, sample_exchanges
 from .stats import global_dossier
 
 ACCENT = "#E1306C"
+
+
+def _highlight_job(convo, slot):
+    """A 'pick the standout messages' job. Carries the candidate `pool` so the
+    browser can turn the model's index picks back into highlight cards."""
+    txt = [m for m in convo.messages if m.text and len(m.text.split()) >= 2]
+    if len(txt) < 10:
+        return None
+    reacted = [m for m in txt if m.tapbacks][:8]
+    step = max(1, len(txt) // 36)
+    seen, pool = set(), []
+    for m in reacted + txt[::step]:
+        if id(m) not in seen:
+            seen.add(id(m))
+            pool.append(m)
+    pool = sorted(pool, key=lambda m: m.ts)[:40]
+    if len(pool) < 6:
+        return None
+    numbered = [(i, f"{'You' if m.is_me else m.sender}: {m.text[:140]}") for i, m in enumerate(pool)]
+    system, prompt = highlight_prompt(numbered)
+    poolmeta = [{"text": m.text[:400], "who": "You" if m.is_me else m.sender, "me": m.is_me,
+                 "date": m.ts.date().isoformat(), "react": [t["kind"] for t in m.tapbacks][:4]}
+                for m in pool]
+    return {"slot": slot, "system": system, "prompt": prompt, "temperature": 0.5,
+            "max_tokens": 140, "post": "highlights", "pool": poolmeta}
+
+
+def _member_reads_job(convo, gi):
+    ms = member_message_samples(convo)
+    if not ms:
+        return None
+    system, prompt = members_prompt(convo.name, ms)
+    return {"slot": {"app": "instagram", "kind": "member_reads", "idx": gi},
+            "system": system, "prompt": prompt, "temperature": 0.5, "max_tokens": 360,
+            "post": "member_reads"}
 
 
 def _act(c):
@@ -66,6 +102,9 @@ def build_ig(threads, name="You", title="Textprint", min_date=None,
         system, prompt = ig_prompt(d, sm)
         jobs.append({"slot": {"app": "instagram", "kind": "person", "idx": i},
                      "system": system, "prompt": prompt, "temperature": 0.4, "max_tokens": 520})
+        hl = _highlight_job(c, {"app": "instagram", "kind": "highlights", "target": "person", "idx": i})
+        if hl:
+            jobs.append(hl)
         people_data.append({"idx": i, "dossier": d, "narrative": ""})
 
     groups_data = []
@@ -75,6 +114,12 @@ def build_ig(threads, name="You", title="Textprint", min_date=None,
         system, prompt = group_prompt(d, sm)
         jobs.append({"slot": {"app": "instagram", "kind": "group", "idx": i},
                      "system": system, "prompt": prompt, "temperature": 0.4, "max_tokens": 520})
+        hl = _highlight_job(c, {"app": "instagram", "kind": "highlights", "target": "group", "idx": i})
+        if hl:
+            jobs.append(hl)
+        mr = _member_reads_job(c, i)
+        if mr:
+            jobs.append(mr)
         groups_data.append({"idx": i, "dossier": d, "narrative": "", "member_reads": {}})
 
     # synopsis (deterministic briefs → independent) then persona (depends on synopsis)
