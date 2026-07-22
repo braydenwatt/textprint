@@ -33,14 +33,18 @@
   function prog(pct,msg){ const b=$("tp_bar"), s=$("tp_step"); if(b&&pct!=null)b.style.width=pct+"%"; if(s&&msg!=null&&msg!=="")s.textContent=msg; }
 
   async function checkHost(){
-    const el=$("tp_proxy"); const url=(el?el.value.trim():"")||LS("proxy");
+    const el=$("tp_proxy"); const explicit=(el?el.value.trim():"")||LS("proxy");
+    const url=(explicit||location.origin).replace(/\/$/,"");   // empty = same origin (served from the proxy)
     const pill=$("tp_hstat"), msg=$("tp_hmsg");
     const set=(c,t,m)=>{ if(pill){pill.className="ipill "+c;pill.textContent=t;} if(m&&msg)msg.textContent=m; };
-    if(!url){ set("wait","not set","No host — you still get every stat, just no AI reads."); return false; }
-    try{ const r=await fetch(url.replace(/\/$/,"")+"/health"); const j=await r.json();
+    try{ const r=await fetch(url+"/health"); const j=await r.json();
       if(j.ok){ set("ok","online","Model "+j.model+" · queue "+j.inflight+"/"+j.max_queue); return true; }
       set("bad","error", j.status||"model not ready"); return false;
-    }catch(e){ set("bad","offline","Couldn’t reach the host — reads skipped."); return false; }
+    }catch(e){
+      if(explicit){ set("bad","offline","Couldn’t reach the host — reads skipped."); }
+      else { set("wait","not set","No host — you still get every stat, just no AI reads."); }
+      return false;
+    }
   }
 
   async function boot(){ if(ready) return ready; ready=(async()=>{
@@ -75,7 +79,7 @@
   }
 
   async function callProxy(job){
-    const url=LS("proxy").replace(/\/$/,""); const tok=LS("token");
+    const url=(LS("proxy")||location.origin).replace(/\/$/,""); const tok=LS("token");
     const h={"Content-Type":"application/json"}; if(tok) h["Authorization"]="Bearer "+tok;
     for(let a=0;a<4;a++){ const r=await fetch(url+"/complete",{method:"POST",headers:h,
       body:JSON.stringify({system:job.system,prompt:job.prompt,temperature:job.temperature,max_tokens:job.max_tokens})});

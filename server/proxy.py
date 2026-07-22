@@ -108,10 +108,19 @@ async def complete(body: CompleteIn, authorization: str = Header(default="")):
         _inflight -= 1
 
 
-@app.get("/")
-async def root():
+@app.get("/info")
+async def info():
     return {"service": "textprint-narration-proxy", "model": MODEL,
             "origins": ORIGINS, "token_required": bool(TOKEN)}
+
+
+# Serve the app itself from the proxy too, so the whole thing can run over plain
+# HTTP on one origin (e.g. over Tailscale) — same-origin, no HTTPS/CORS needed.
+# The phone opens http://<host>:<port>/ and reads go to /complete on the same origin.
+_DOCS = pathlib.Path(__file__).resolve().parents[1] / "docs"
+if _DOCS.is_dir():
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/", StaticFiles(directory=str(_DOCS), html=True), name="app")
 
 
 if __name__ == "__main__":

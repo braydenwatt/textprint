@@ -26,7 +26,33 @@ export TEXTPRINT_TOKEN=some-shared-secret              # optional; blank disable
 uvicorn proxy:app --host 127.0.0.1 --port 8100
 ```
 
-## Expose it — over Tailscale (recommended for personal / phone use)
+## Simplest: run the whole app over plain HTTP on your tailnet (no HTTPS)
+
+The proxy also **serves the app itself** (from `../docs`), so the entire thing can
+run on one HTTP origin — no certificates, no Tailscale Serve, no CORS. Bind Ollama
+to all interfaces once (`OLLAMA_HOST=0.0.0.0`), then run the proxy on all interfaces:
+
+```powershell
+cd server
+$env:TEXTPRINT_MODEL="gemma4:26b"
+python -m uvicorn proxy:app --host 0.0.0.0 --port 8100
+```
+
+On your **phone** (Tailscale app connected to the same tailnet), just open:
+
+```
+http://<your-pc>.<tailnet>.ts.net:8100/      e.g. http://homepc.tail78906e.ts.net:8100/
+```
+
+That's it — the app loads, and because it's the same origin as the proxy it finds
+the host automatically (the "Ollama proxy URL" box can stay empty). Reads run on
+your PC's Ollama. Everything stays inside your tailnet.
+
+> Note: `--host 0.0.0.0` also exposes it to your local Wi-Fi. For tailnet-only,
+> bind to your Tailscale IP instead (`--host 100.x.y.z`), and/or set
+> `TEXTPRINT_TOKEN` so a token is required.
+
+## Over Tailscale with HTTPS (only needed for the public github.io site)
 
 If your devices are on [Tailscale](https://tailscale.com), you can reach the proxy
 from your phone privately over your tailnet — HTTPS, stable hostname, no public
