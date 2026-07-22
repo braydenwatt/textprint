@@ -26,7 +26,28 @@ export TEXTPRINT_TOKEN=some-shared-secret              # optional; blank disable
 uvicorn proxy:app --host 127.0.0.1 --port 8100
 ```
 
-## Expose it — stable URL via a named tunnel (recommended)
+## Expose it — over Tailscale (recommended for personal / phone use)
+
+If your devices are on [Tailscale](https://tailscale.com), you can reach the proxy
+from your phone privately over your tailnet — HTTPS, stable hostname, no public
+tunnel. Bind Ollama to all interfaces once (`OLLAMA_HOST=0.0.0.0`), then:
+
+```powershell
+cd server
+.\start_tailscale.ps1        # starts the proxy + Tailscale Serve
+```
+
+One-time: it will print a link if **Tailscale Serve** isn't enabled on your
+tailnet yet — click it (one toggle), then re-run. It then prints your stable URL,
+e.g. `https://homepc.<tailnet>.ts.net`. On your phone (Tailscale app connected to
+the same tailnet), open the Textprint site and paste that URL into "Ollama proxy
+URL". Because the site's origin is still the same, the existing CORS allowlist
+already covers it — no config change needed.
+
+Private to your tailnet only. To share with people who aren't on your tailnet,
+use the Cloudflare tunnel below instead (or `tailscale funnel` to go public).
+
+## Expose it — stable URL via a named tunnel
 
 A **named tunnel** gives you a permanent hostname (e.g. `https://textprint.yourdomain.com`)
 instead of a random URL that changes every restart. Two PowerShell scripts automate it.
